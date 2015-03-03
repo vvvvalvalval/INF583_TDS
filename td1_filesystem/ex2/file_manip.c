@@ -47,15 +47,12 @@ size_t my_fread(void *ptr, size_t size, size_t nmemb, MY_FILE *stream)
   int count = size*nmemb;
   int nb_data_read = 0;
   int nb_total_data_read = 0;
-  errno = 0;
   while ( (nb_data_read = read(stream->fd, ptr, count)) != 0 )
     {
       if (nb_data_read == -1)
 	{
-	  if (errno == EINTR) {
-            errno = 0;
+	  if (errno == EINTR)
 	    continue;
-          }
 	  else
 	    return 0;
 	}
@@ -73,18 +70,15 @@ size_t my_fwrite(const void *ptr, size_t size, size_t nmemb, MY_FILE *stream)
   int count = size*nmemb;
   int nb_data_write = 0;
   int nb_total_data_write = 0;
-  errno = 0;
   while ( (nb_data_write = write(stream->fd, ptr, count)) != 0 )
     {
       if (nb_data_write == -1)
-        {
-          if (errno == EINTR) {
-            errno = 0;
-            continue;
-          }
-          else
-            return 0;
-        }
+	{
+	  if (errno == EINTR)
+	    continue;
+	  else
+	    return 0;
+	}
       nb_total_data_write += nb_data_write;
       ptr = (char*)ptr + nb_data_write;
       count -= nb_data_write;

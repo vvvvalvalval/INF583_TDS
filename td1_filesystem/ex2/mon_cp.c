@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <errno.h>
+#include <unistd.h>
 #include "file_manip.h"
-
 
 #define BUFFER_SIZE 20
 
@@ -38,10 +40,12 @@ char * create_copy_name(char* source, char* destination)
   return filename;
 }
 
+
     
 /* Copie de fichier */
 int copy(char* source, char* destination)
 {
+  int res = 0;
   int nb_data_read = 0;
 
   printf("Copie du fichier %s sur le fichier %s\n",source,destination);
@@ -74,11 +78,17 @@ int copy(char* source, char* destination)
   //On copie ensuite ce qui vient d'être lu dans le fichier destination
   //On prend soin de ne copier que ce qui vient d'être lu
   //(nb_data_read != BUFFER_SIZE) !
+  errno=0;
   while ((nb_data_read = my_fread(buf,1,BUFFER_SIZE,source_fd)))
     {
-      my_fwrite(buf,1,nb_data_read,destination_fd);
+      if (errno)
+        {
+          perror("my_fread failed");
+      return -1;
+        }
+      res = my_fwrite(buf,1,nb_data_read,destination_fd);
       //on verifie les erreurs eventuelles sur errno pour my_fwrite
-      if (errno) // horreur ! c'est un pis-aller (absence de feof())
+      if (nb_data_read != res)
         {
           perror("my_frite failed");
           return -1;
@@ -117,6 +127,8 @@ int main(int argc, char* argv[])
   /* Gestion des paramètres */
   char * source;
   char * destination;
+  struct stat stat_file_source;
+  struct stat stat_file_destination;
   switch(argc)
     {
     case 3:
@@ -124,6 +136,38 @@ int main(int argc, char* argv[])
       /* des modifications sont requises pour l'exercice 4*/
       source = argv[1];
       destination = argv[2];
+      
+      if (stat(source, &stat_file_source) == -1)
+        {
+          perror("Stat on source Failed");
+          return -1;
+        }
+      if (!S_ISREG(stat_file_source.st_mode))
+        ARGUMENTS_ERROR("Le fichier source doît être un fichier régulier");
+      
+      if (stat(destination, &stat_file_destination) == -1)
+        {
+          if (errno != ENOENT)
+            {
+              perror("Stat on destination Failed");
+              return -1;
+            }
+        }
+      else if ((stat_file_destination.st_dev == stat_file_source.st_dev) &&
+               (stat_file_destination.st_ino == stat_file_source.st_ino))
+        {
+          ARGUMENTS_ERROR("Les fichiers source et destination sont identiques");
+        }
+      else if (S_ISDIR(stat_file_destination.st_mode))
+        {
+          destination = create_copy_name(source, destination);
+          if (destination == NULL)
+            {
+              perror("Malloc failed ");
+              return -1;
+            }
+        }
+
       error_code = copy(source, destination);
       break;
     case 4:
