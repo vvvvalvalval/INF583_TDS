@@ -11,10 +11,9 @@ typedef struct
 } MY_FILE;
 
 /* Definition des prototypes de fonctions  */
-extern MY_FILE *my_fopen(const char *, const char *);
-extern size_t my_fread(void *, size_t, size_t, MY_FILE *);
-extern size_t my_fwrite(const void *, size_t, size_t, MY_FILE *);
-extern int my_fclose(MY_FILE *);
+extern MY_FILE *my_fopen(const char *path, const char *mode);
+extern size_t my_fread(void *ptr, size_t size, size_t nmemb, MY_FILE *stream);
+extern size_t my_fwrite(const void *ptr, size_t size, size_t nmemb, MY_FILE *stream);
+extern int my_fclose(MY_FILE *fp);
 
 #endif
-

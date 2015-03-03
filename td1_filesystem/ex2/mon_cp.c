@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
+#include "file_manip.h"
+
 
 #define BUFFER_SIZE 20
 
@@ -12,8 +15,9 @@
     return -1; \
   }
 
-/* Fonction utile à partir de l'exercice 4 pour déterminer
-   le nom du fichier destination */
+
+/* Fonction utile à partir de l'exercice 4 pour déterminer le nom
+   du fichier destination */
 char * create_copy_name(char* source, char* destination)
 {
   char * basename = strrchr(source,'/');
@@ -22,18 +26,22 @@ char * create_copy_name(char* source, char* destination)
   char * dirname  = destination;
   char * filename = malloc(sizeof(char) * (strlen(basename) + 1 +
                                            strlen(dirname)  + 1  ));
-  *filename = '\0';
+  if (filename == NULL)
+    {
+      perror("Malloc Failed ");
+      return NULL;
+    }
+  *filename='\0';
   strcat(filename,dirname);
   strcat(filename,"/");
   strcat(filename,basename);
   return filename;
 }
 
+    
 /* Copie de fichier */
-/* Version de l'exercice 1 sans detection des erreurs */
 int copy(char* source, char* destination)
 {
-  int res = 0;
   int nb_data_read = 0;
 
   printf("Copie du fichier %s sur le fichier %s\n",source,destination);
@@ -41,22 +49,59 @@ int copy(char* source, char* destination)
   //Allocation de la mémoire tampon pour transférer des données du
   //fichier source sur le fichier destination  
   char * buf = malloc(sizeof(char)*BUFFER_SIZE);
+  if (buf == NULL)
+    {
+      perror("Malloc Failed ");
+      return -1;
+    }
 
   //Ouverture des fichiers source et destination respectivement en
   //lecture et en écriture
-  FILE * source_fd = fopen(source,"r");
-  FILE * destination_fd = fopen(destination,"w");
+  MY_FILE * source_fd = my_fopen(source,"r");
+  if (source_fd == NULL)
+    {
+      perror("Opening source Failed");
+      return -1;
+    }
+  MY_FILE * destination_fd = my_fopen(destination,"w");
+  if (destination_fd == NULL)
+    {
+      perror("Opening destination Failed");
+      return -1;
+    }
 
   //On boucle tant qu'il y a quelque chose à lire
   //On copie ensuite ce qui vient d'être lu dans le fichier destination
   //On prend soin de ne copier que ce qui vient d'être lu
   //(nb_data_read != BUFFER_SIZE) !
-  while ((nb_data_read = fread(buf,1,BUFFER_SIZE,source_fd)))
-    res = fwrite(buf,1,nb_data_read,destination_fd);
+  while ((nb_data_read = my_fread(buf,1,BUFFER_SIZE,source_fd)))
+    {
+      my_fwrite(buf,1,nb_data_read,destination_fd);
+      //on verifie les erreurs eventuelles sur errno pour my_fwrite
+      if (errno) // horreur ! c'est un pis-aller (absence de feof())
+        {
+          perror("my_frite failed");
+          return -1;
+        }
+    }
+  //on verifie les erreurs eventuelles sur errno pour my_fread
+  if (errno)
+    {
+      perror("my_fread failed");
+      return -1;
+    }
   
   //On ferme les fichiers source et destination
-  fclose(source_fd);
-  fclose(destination_fd);
+  if (my_fclose(source_fd) != 0)
+    {
+      perror("Closing source Failed");
+      return -1;
+    }
+  if (my_fclose(destination_fd) != 0)
+    {
+      perror("Closing destination Failed");
+      return -1;
+    }
 
   //On libere la mémoire occupée par le buffer
   free(buf);
@@ -93,4 +138,3 @@ int main(int argc, char* argv[])
     }
   return error_code;
 }
-
