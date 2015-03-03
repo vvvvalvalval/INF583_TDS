@@ -58,12 +58,33 @@ MY_FILE *my_popen (const char *command, const char *type)
       return NULL;
       break;
     case 0:
-      //Fils
+      /* Fils */
       
+      /* No need of this side of the pipe */
+      close(pipe_fd[son_unused_id]);
+
+      /* I replace the used descriptor my by own fifo */
+      dup2(pipe_fd[son_used_id],son_used_id);
+      
+      /* I close the fifo, the used descriptor is now equivalent to it */ 
+      close(pipe_fd[son_used_id]);
+
+      execl("/bin/sh","/bin/sh","-c",command,"\0");
       break;
     default:
-      //Pere
+      /* Pere */
+
+      /* No need of this side of the pipe */
+      close(pipe_fd[father_unused_id]);
       
+      my_pipe = malloc(sizeof(MY_FILE)); 
+      if (my_pipe == NULL)
+        return NULL;
+      
+      /* We will use this */
+      my_pipe->fd = pipe_fd[father_used_id];
+      
+      my_pipe->son_pid = pid; 
       break;
     }
   return my_pipe;
@@ -79,12 +100,12 @@ int my_pclose (MY_FILE *stream)
 }
 
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
   char read_buffer[BUFFER_SIZE];
   int nb_data_read;
 
-  MY_FILE *my_pipe_1 = my_popen("echo Vive inf 422","r");
+  MY_FILE *my_pipe_1 = my_popen("echo Vive INF422","r");
   MY_FILE *my_pipe_2 = my_popen("sed s/422/583/","w");
 
   nb_data_read = read(my_pipe_1->fd,read_buffer,BUFFER_SIZE); 
@@ -95,3 +116,4 @@ int main(int argc, char* argv[])
 
   return 0;
 }
+
